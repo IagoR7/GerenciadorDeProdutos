@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastrar Categoria</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+    <div class="container mt-5">
+        <div class="col-md-5 mx-auto">
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <button id="btnVoltar" class="btn btn-sm btn-outline-light">Voltar</button>
+                    <h5 class="mb-0">Cadastro de Categoria</h5>
+                    <div style="width:48px"></div>
+                </div>
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Categoria</label>
+                        <input type="text" id="nomeCategoria" class="form-control" placeholder="Digite o nome da categoria">
+                    </div>
+
+                    <button class="btn btn-success w-100" id="btnCadastrar">Cadastrar</button>
+                    <button class="btn btn-secondary w-100 mt-2" id="btnLimpar">Limpar</button>
+
+                    <div id="mensagem" class="mt-3"></div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const idUsuario = localStorage.getItem("usuarioId");
+
+        if (!idUsuario) {
+            window.location.href = "login.html";
+            throw new Error("Usuário não logado");
+        }
+
+        
+        document.getElementById("btnVoltar").addEventListener("click", () => {
+            
+            localStorage.setItem('categoriaAtualizada', String(Date.now()));
+            
+            window.location.href = "CadastroProdutos.html";
+        });
+
+        document.getElementById("btnCadastrar").addEventListener("click", async () => {
+            const nome = document.getElementById("nomeCategoria").value.trim();
+            const mensagemDiv = document.getElementById("mensagem");
+
+            mensagemDiv.innerHTML = "";
+
+            if (!nome) {
+                mensagemDiv.innerHTML =
+                    `<div class="alert alert-warning">Preencha o nome da categoria!</div>`;
+                return;
+            }
+
+            
+            const categoria = {
+                nome,
+                usuario: { id: Number(idUsuario) }
+            };
+
+            try {
+                const response = await fetch("/categorias/cadastrar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(categoria)
+                });
+
+                const text = await response.text();
+                let data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { mensagem: text }; }
+
+                if (!response.ok) {
+                    mensagemDiv.innerHTML =
+                        `<div class="alert alert-danger">${data.mensagem ?? 'Erro ao cadastrar!'}</div>`;
+                } else {
+                    
+                    localStorage.setItem('categoriaAtualizada', String(Date.now()));
+                    mensagemDiv.innerHTML =
+                        `<div class="alert alert-success">Categoria cadastrada com sucesso!</div>`;
+
+                    document.getElementById("nomeCategoria").value = "";
+                }
+
+            } catch (err) {
+                mensagemDiv.innerHTML =
+                    `<div class="alert alert-danger">Erro ao conectar com o servidor!</div>`;
+            }
+        });
+
+        document.getElementById("btnLimpar").addEventListener("click", () => {
+            document.getElementById("nomeCategoria").value = "";
+            document.getElementById("mensagem").innerHTML = "";
+        });
+    </script>
+
+</body>
+
+</html>

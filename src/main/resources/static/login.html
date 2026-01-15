@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
+    <div class="col-md-4">
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white text-center">
+                <h5 class="mb-0">Login do Sistema</h5>
+            </div>
+
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label class="form-label">Login</label>
+                    <input type="text" id="login" class="form-control" placeholder="Digite seu login">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Senha</label>
+                    <input type="password" id="senha" class="form-control" placeholder="Digite a senha">
+                </div>
+
+                <button class="btn btn-primary w-100" id="btnLogin">Entrar</button>
+                <p></p>
+                <div>
+                    <button class="btn btn-secondary w-10" id="btncadsenha">Cadastrar</button>
+                    <button class="btn btn-secondary w-10" id="btnaltsenha">Alterar Senha</button>
+
+                </div>
+                
+
+                <div id="mensagem" class="mt-3"></div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+
+    
+    document.getElementById('btnaltsenha').addEventListener('click', () => {
+        window.location.href = 'alterarSenha.html'; 
+    });
+
+    
+    document.getElementById('btncadsenha').addEventListener('click', () => {
+        window.location.href = 'CadastroUsuario.html'; 
+    });
+
+    document.getElementById('btnLogin').addEventListener('click', async () => {
+
+        const login = document.getElementById('login').value.trim();
+        const senha = document.getElementById('senha').value.trim();
+        const mensagemDiv = document.getElementById('mensagem');
+
+        mensagemDiv.textContent = '';
+        mensagemDiv.className = '';
+
+        if (!login || !senha) {
+            mensagemDiv.textContent = 'Preencha login e senha.';
+            mensagemDiv.className = 'alert alert-danger';
+            return;
+        }
+
+        try {
+            const response = await fetch('/usuarios/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login, senha })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                mensagemDiv.textContent = data.mensagem || 'Erro ao logar.';
+                mensagemDiv.className = 'alert alert-danger';
+            } else {
+                mensagemDiv.textContent = 'Login realizado com sucesso';
+                mensagemDiv.className = 'alert alert-success';
+                localStorage.setItem("usuarioId", data.id);
+                window.location.href = "ListarProdutos.html";
+
+                setTimeout(() => {
+                    window.location.href = "ListarProdutos.html";
+                }, 1000);
+            }
+
+        } catch (error) {
+            mensagemDiv.textContent = 'Erro ao conectar com o servidor.';
+            mensagemDiv.className = 'alert alert-danger';
+        }
+    });
+</script>
+
+</body>
+</html>

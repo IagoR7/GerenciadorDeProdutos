@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Excluir Produtos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" >Controle de Estoque</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="ListarProdutos.html">Produtos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="CadastroProdutos.html">Adicionar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="AlterarProdutos.html">Editar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="DeletarProdutos.html">Remover</a></li>
+                    <li class="nav-item"><a class="nav-link" href="Movimentacoes.html">Movimentações</a></li>
+                    <li class="nav-item"><a class="nav-link text-danger" href="login.html" id="btnSair">Sair</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+
+        <h2 class="mb-4 text-center">Excluir Produtos</h2>
+
+        <table class="table table-bordered table-hover bg-white shadow-sm">
+            <thead class="table-dark text-center">
+                <tr>
+                    <th>Codigo</th>
+                    <th>Nome</th>
+                    <th>Quantidade</th>
+                    <th>Preço</th>
+                    <th>Categoria</th>
+                    <th>Usuário</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaProdutos" class="text-center"></tbody>
+        </table>
+
+        <div id="mensagem" class="mt-3 text-center"></div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8080";
+
+        async function carregarProdutos() {
+            const tabela = document.getElementById("tabelaProdutos");
+            tabela.innerHTML = "";
+
+            const usuarioId = localStorage.getItem("usuarioId");
+            if (!usuarioId) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            try {
+                
+                const response = await fetch(`${API_BASE}/produtos/listar/${encodeURIComponent(usuarioId)}`);
+                if (!response.ok) {
+                    document.getElementById("mensagem").innerHTML =
+                        `<div class="alert alert-danger">Erro ao carregar produtos: ${response.status} ${response.statusText}</div>`;
+                    return;
+                }
+
+                const produtos = await response.json();
+
+                if (!Array.isArray(produtos) || produtos.length === 0) {
+                    document.getElementById("mensagem").innerHTML =
+                        `<div class="alert alert-warning">Nenhum produto cadastrado para este usuário.</div>`;
+                    return;
+                }
+
+                produtos.forEach(produto => {
+                    const tr = document.createElement("tr");
+
+                    tr.innerHTML = `
+                        <td>${produto.id ?? ''}</td>
+                        <td>${produto.nome ?? ''}</td>
+                        <td>${produto.quantidade ?? 0}</td>
+                        <td>R$ ${Number(produto.preco ?? 0).toFixed(2)}</td>
+                        <td>${produto.categoria?.nome ?? ""}</td>
+                        <td>${produto.usuario?.login ?? ""}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deletarProduto(${produto.id})">Excluir</button>
+                        </td>
+                    `;
+
+                    tabela.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById("mensagem").innerHTML =
+                    `<div class="alert alert-danger">Erro ao carregar produtos!</div>`;
+            }
+        }
+
+        async function deletarProduto(id) {
+            if (!confirm("Você tem certeza que deseja excluir este produto?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/produtos/remover/${id}`, {
+                    method: "DELETE"
+                });
+
+                let data = {};
+                try {
+                    const text = await response.text();
+                    data = text ? JSON.parse(text) : {};
+                } catch (e) {
+                    data = { mensagem: await response.text().catch(() => "") };
+                }
+
+                if (!response.ok) {
+                    const msg = data?.mensagem || data?.message || response.statusText || `Erro ${response.status}`;
+                    document.getElementById("mensagem").innerHTML =
+                        `<div class="alert alert-danger">${msg}</div>`;
+                } else {
+                    const successMsg = data?.mensagem || "Produto excluído com sucesso!";
+                    document.getElementById("mensagem").innerHTML =
+                        `<div class="alert alert-success">${successMsg}</div>`;
+                    // recarrega apenas produtos do usuário
+                    carregarProdutos();
+                }
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById("mensagem").innerHTML =
+                    `<div class="alert alert-danger">Erro ao excluir produto!</div>`;
+            }
+        }
+
+        carregarProdutos();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

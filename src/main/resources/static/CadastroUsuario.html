@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro de Usuário</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+    <div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
+        <div class="col-md-4">
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white text-center">
+                    <h5 class="mb-0">Cadastro de Usuário</h5>
+                </div>
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input type="text" id="nome" class="form-control" placeholder="Digite o nome completo">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Login</label>
+                        <input type="text" id="login" class="form-control" placeholder="Defina um login">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Senha</label>
+                        <input type="password" id="senha" class="form-control" placeholder="Digite a senha">
+                    </div>
+
+                    <button class="btn btn-success w-100" id="btnCadastrar">Cadastrar</button>
+
+                    <div id="mensagem" class="mt-3"></div>
+
+                    <div class="text-center mt-3">
+                        <a href="login.html">Já tem conta? Faça login</a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('btnCadastrar').addEventListener('click', async () => {
+
+            const nome = document.getElementById('nome').value.trim();
+            const login = document.getElementById('login').value.trim();
+            const senha = document.getElementById('senha').value.trim();
+            const mensagemDiv = document.getElementById('mensagem');
+
+            mensagemDiv.textContent = '';
+            mensagemDiv.className = '';
+
+            if (!nome || !login || !senha) {
+                mensagemDiv.textContent = 'Preencha todos os campos.';
+                mensagemDiv.className = 'alert alert-danger';
+                return;
+            }
+
+            try {
+                const response = await fetch('/usuarios/cadastrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome: nome,
+                        login: login,
+                        senha: senha
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    mensagemDiv.textContent = data.mensagem || 'Erro ao cadastrar!';
+                    mensagemDiv.className = 'alert alert-danger';
+
+                } else {
+                    mensagemDiv.textContent = 'Usuário cadastrado com sucesso!';
+                    mensagemDiv.className = 'alert alert-success';
+
+                    setTimeout(() => {
+                        window.location.href = "login.html";
+                    }, 1200);
+                }
+
+            } catch (error) {
+                mensagemDiv.textContent = 'Erro ao conectar com o servidor.';
+                mensagemDiv.className = 'alert alert-danger';
+            }
+        });
+    </script>
+
+</body>
+
+</html>

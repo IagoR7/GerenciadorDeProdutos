@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Editar Produto</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand">Controle de Estoque</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="ListarProdutos.html">Produtos</a></li>
+          <li class="nav-item"><a class="nav-link" href="CadastroProdutos.html">Adicionar</a></li>
+          <li class="nav-item"><a class="nav-link" href="AlterarProdutos.html">Editar</a></li>
+          <li class="nav-item"><a class="nav-link" href="DeletarProdutos.html">Remover</a></li>
+          <li class="nav-item"><a class="nav-link" href="Movimentacoes.html">Movimentações</a></li>
+          <li class="nav-item"><a class="nav-link text-danger" href="login.html" id="btnSair">Sair</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h5 class="mb-0">Editar Produto</h5>
+          </div>
+          <div class="card-body">
+
+
+            <div class="mb-3">
+              <label class="form-label">Selecione o Produto</label>
+              <select id="produtoSelect" class="form-select">
+                <option value="">Carregando produtos...</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Nome do Produto</label>
+              <input type="text" id="nome" class="form-control" disabled>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Quantidade</label>
+              <input type="number" id="quantidade" class="form-control" disabled>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Preço</label>
+              <input type="number" id="preco" step="0.01" class="form-control" disabled>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Categoria</label>
+              <select id="categoria" class="form-select" disabled></select>
+            </div>
+
+            <button id="btnSalvar" class="btn btn-warning w-100 text-white" disabled>Salvar Alterações</button>
+
+            <div id="mensagem" class="mt-3"></div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    function showMessage(html) {
+      document.getElementById('mensagem').innerHTML = html;
+    }
+
+    async function carregarCategoriasSelecionadas(idCategoria) {
+      try {
+        const idUsuario = Number(localStorage.getItem("usuarioId"));
+        if (!idUsuario) {
+          showMessage(`<div class="alert alert-danger">Usuário não encontrado. Faça login.</div>`);
+          return;
+        }
+
+        const res = await fetch(`http://localhost:8080/categorias/listar/usuario/${encodeURIComponent(idUsuario)}`);
+        if (!res.ok) {
+          showMessage(`<div class="alert alert-danger">Erro ao carregar categorias: ${res.statusText}</div>`);
+          return;
+        }
+        const categorias = await res.json();
+        const select = document.getElementById("categoria");
+        select.innerHTML = "";
+        categorias.forEach(cat => {
+          const option = document.createElement("option");
+          option.value = cat.id;
+          option.textContent = cat.nome;
+          if (Number(cat.id) === Number(idCategoria)) option.selected = true;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error(err);
+        showMessage(`<div class="alert alert-danger">Erro ao carregar categorias.</div>`);
+      }
+    }
+
+    async function carregarProdutosUsuario() {
+      const produtoSelect = document.getElementById("produtoSelect");
+      produtoSelect.innerHTML = `<option value="">Carregando...</option>`;
+      showMessage("");
+
+      const idUsuario = localStorage.getItem("usuarioId");
+      if (!idUsuario) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:8080/produtos/listar/${encodeURIComponent(idUsuario)}`);
+        if (!res.ok) {
+          produtoSelect.innerHTML = `<option value="">Erro ao carregar</option>`;
+          showMessage(`<div class="alert alert-danger">Erro ao carregar produtos: ${res.status}</div>`);
+          return;
+        }
+        const produtos = await res.json();
+        if (!Array.isArray(produtos) || produtos.length === 0) {
+          produtoSelect.innerHTML = `<option value="">Nenhum produto encontrado</option>`;
+          return;
+        }
+        produtoSelect.innerHTML = `<option value=""> Selecione o produto </option>`;
+        produtos.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.id;
+          opt.textContent = `${p.nome}`;
+          produtoSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error(err);
+        produtoSelect.innerHTML = `<option value="">Erro</option>`;
+        showMessage(`<div class="alert alert-danger">Erro ao carregar produtos.</div>`);
+      }
+    }
+
+    async function carregarProdutoPorId(id) {
+      if (!id) {
+        habilitarEdicao(false);
+        document.getElementById("nome").value = "";
+        document.getElementById("quantidade").value = "";
+        document.getElementById("preco").value = "";
+        document.getElementById("categoria").innerHTML = "";
+        return;
+      }
+
+      showMessage("");
+      try {
+        const response = await fetch(`http://localhost:8080/produtos/${encodeURIComponent(id)}`);
+        const ct = response.headers.get("content-type") || "";
+        let data;
+        if (ct.includes("application/json")) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          data = { mensagem: text };
+        }
+
+        if (!response.ok) {
+          const msg = data?.mensagem || data?.message || response.statusText;
+          showMessage(`<div class="alert alert-danger">${msg}</div>`);
+          habilitarEdicao(false);
+          return;
+        }
+
+
+        document.getElementById("nome").value = data.nome ?? '';
+        document.getElementById("quantidade").value = data.quantidade ?? 0;
+        document.getElementById("preco").value = data.preco ?? 0;
+        await carregarCategoriasSelecionadas(data.categoria?.id);
+
+        habilitarEdicao(true);
+      } catch (erro) {
+        console.error(erro);
+        showMessage(`<div class="alert alert-danger">Erro ao buscar produto.</div>`);
+        habilitarEdicao(false);
+      }
+    }
+
+    function habilitarEdicao(habilitar) {
+      document.getElementById("nome").disabled = !habilitar;
+      document.getElementById("quantidade").disabled = !habilitar;
+      document.getElementById("preco").disabled = !habilitar;
+      document.getElementById("categoria").disabled = !habilitar;
+      document.getElementById("btnSalvar").disabled = !habilitar;
+    }
+
+    async function alterarProduto() {
+      const idProduto = document.getElementById("produtoSelect").value;
+      const idUsuario = Number(localStorage.getItem("usuarioId"));
+
+      if (!idProduto) { showMessage(`<div class="alert alert-danger">Informe o produto.</div>`); return; }
+      if (!idUsuario) { showMessage(`<div class="alert alert-danger">Usuário não encontrado. Faça login.</div>`); return; }
+
+      const nome = document.getElementById("nome").value.trim();
+      const quantidade = parseInt(document.getElementById("quantidade").value);
+      const preco = parseFloat(document.getElementById("preco").value);
+      const categoriaId = Number(document.getElementById("categoria").value);
+
+      if (!nome || isNaN(quantidade) || isNaN(preco) || !categoriaId) {
+        showMessage(`<div class="alert alert-warning">Preencha todos os campos corretamente.</div>`);
+        return;
+      }
+
+      const produto = {
+        id: Number(idProduto),
+        nome,
+        quantidade,
+        preco,
+        usuario: { id: idUsuario },
+        categoria: { id: categoriaId }
+      };
+
+      try {
+        const response = await fetch(`http://localhost:8080/produtos/alterar`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(produto)
+        });
+
+        let raw = "";
+        try { raw = await response.text(); } catch (e) { }
+        let data;
+        try { data = raw ? JSON.parse(raw) : {}; } catch (e) { data = { mensagem: raw }; }
+
+        if (response.ok) {
+          const msg = data?.mensagem || data?.message || "Produto alterado com sucesso.";
+
+          await carregarProdutosUsuario();
+          document.getElementById("produtoSelect").value = String(produto.id);
+
+          showMessage(`<div class="alert alert-success">${msg}</div>`);
+          alert(msg);
+
+          setTimeout(() => { document.getElementById('mensagem').innerHTML = ''; }, 4000);
+        } else {
+          const msg = data?.mensagem || data?.message || raw || response.statusText || "Erro desconhecido";
+          showMessage(`<div class="alert alert-danger">${msg}</div>`);
+        }
+      } catch (err) {
+        console.error("Erro fetch alterarProduto:", err);
+        showMessage(`<div class="alert alert-danger">Erro ao conectar ao servidor.</div>`);
+      }
+    }
+
+
+    document.getElementById("produtoSelect").addEventListener("change", (e) => {
+      carregarProdutoPorId(e.target.value);
+    });
+    document.getElementById("btnSalvar").addEventListener("click", alterarProduto);
+
+
+    carregarProdutosUsuario();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
